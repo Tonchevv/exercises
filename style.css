@@ -55,6 +55,13 @@ body {
 }
 
 
+.controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2em;
+}
+
 .controls button {
     color: white;
     padding: 8px;
@@ -71,4 +78,5 @@ body {
 
 #reset {
     background-color: #FF3860;
+    
 }

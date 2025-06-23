@@ -1,116 +1,135 @@
 window.addEventListener('DOMContentLoaded', () => {
     const tiles = Array.from(document.querySelectorAll('.tile'));
-    const playerDisplay = document.querySelector('.display-player');
-    const resetButton = document.querySelector('#reset');
+    const display = document.querySelector('.display');
     const announcer = document.querySelector('.announcer');
+    const resetButton = document.getElementById('reset');
 
     let board = ['', '', '', '', '', '', '', '', ''];
-    let currentPlayer = 'X';
+    let currentPlayer = 'O'; // You start as O
     let isGameActive = true;
 
-    const PLAYERX_WON = 'PLAYERX_WON';
-    const PLAYERO_WON = 'PLAYERO_WON';
-    const TIE = 'TIE';
+    const PLAYER_O = 'O'; // You
+    const PLAYER_X = 'X'; // AI
 
     const winningConditions = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
+        [0,1,2],[3,4,5],[6,7,8], // rows
+        [0,3,6],[1,4,7],[2,5,8], // cols
+        [0,4,8],[2,4,6]          // diags
     ];
 
     function handleResultValidation() {
         let roundWon = false;
-        for (let i = 0; i <= 7; i++) {
-            const winCondition = winningConditions[i];
-            const a = board[winCondition[0]];
-            const b = board[winCondition[1]];
-            const c = board[winCondition[2]];
-            if (a === '' || b === '' || c === '') {
-                continue;
-            }
-            if (a === b && b === c) {
+        for (let i = 0; i < winningConditions.length; i++) {
+            const [a, b, c] = winningConditions[i];
+            if (board[a] && board[a] === board[b] && board[a] === board[c]) {
                 roundWon = true;
                 break;
             }
         }
-
-    if (roundWon) {
-            announce(currentPlayer === 'X' ? PLAYERX_WON : PLAYERO_WON);
+        if (roundWon) {
+            announce(currentPlayer === PLAYER_O ? 'YOU_WIN' : 'AI_WIN');
             isGameActive = false;
-            return;
+            return true;
         }
-
-    if (!board.includes(''))
-        announce(TIE);
+        if (!board.includes('')) {
+            announce('TIE');
+            isGameActive = false;
+            return true;
+        }
+        return false;
     }
 
-    const announce = (type) => {
+    function announce(type) {
         switch(type){
-            case PLAYERO_WON:
-                announcer.innerHTML = 'Player <span class="playerO">O</span> Won';
+            case 'AI_WIN':
+                announcer.innerHTML = 'AI (<span class="playerX">X</span>) Wins!';
                 break;
-            case PLAYERX_WON:
-                announcer.innerHTML = 'Player <span class="playerX">X</span> Won';
+            case 'YOU_WIN':
+                announcer.innerHTML = 'You (<span class="playerO">O</span>) Win!';
                 break;
-            case TIE:
-                announcer.innerText = 'Tie';
+            case 'TIE':
+                announcer.innerText = 'Tie!';
         }
         announcer.classList.remove('hide');
-    };
+    }
 
-    const isValidAction = (tile) => {
-        if (tile.innerText === 'X' || tile.innerText === 'O'){
-            return false;
-        }
+    function isValidAction(tile) {
+        return tile.textContent === '';
+    }
 
-        return true;
-    };
-
-    const updateBoard =  (index) => {
+    function updateBoard(index) {
         board[index] = currentPlayer;
     }
 
-    const changePlayer = () => {
-        playerDisplay.classList.remove(`player${currentPlayer}`);
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        playerDisplay.innerText = currentPlayer;
-        playerDisplay.classList.add(`player${currentPlayer}`);
+    function changePlayer() {
+        currentPlayer = currentPlayer === PLAYER_O ? PLAYER_X : PLAYER_O;
+        display.innerHTML = `Player <span class="display-player player${currentPlayer}">${currentPlayer}</span>'s turn`;
     }
 
-    const userAction = (tile, index) => {
-        if(isValidAction(tile) && isGameActive) {
-            tile.innerText = currentPlayer;
-            tile.classList.add(`player${currentPlayer}`);
+    function userAction(tile, index) {
+        if (isValidAction(tile) && isGameActive && currentPlayer === PLAYER_O) {
+            tile.textContent = PLAYER_O;
+            tile.classList.add('playerO');
             updateBoard(index);
-            handleResultValidation();
-            changePlayer();
+            if (!handleResultValidation()) {
+                changePlayer();
+                showAIThinking();
+                setTimeout(aiMove, 1000); // AI moves after 1 second
+            }
         }
     }
-    
-    const resetBoard = () => {
-        board = ['', '', '', '', '', '', '', '', ''];
-        isGameActive = true;
-        announcer.classList.add('hide');
 
-        if (currentPlayer === 'O') {
-            changePlayer();
-        }
-
-        tiles.forEach(tile => {
-            tile.innerText = '';
-            tile.classList.remove('playerX');
-            tile.classList.remove('playerO');
+    function showAIThinking() {
+        display.innerHTML = `AI (<span class="display-player playerX">X</span>) is thinking...`;
+        tiles.forEach((tile, idx) => {
+            if (board[idx] === '') {
+                tile.classList.add('ai-thinking');
+            }
         });
     }
 
-    tiles.forEach( (tile, index) => {
+    function hideAIThinking() {
+        tiles.forEach(tile => tile.classList.remove('ai-thinking'));
+    }
+
+    function aiMove() {
+        if (!isGameActive) {
+            hideAIThinking();
+            return;
+        }
+       
+        const emptyIndices = board.map((val, idx) => val === '' ? idx : null).filter(idx => idx !== null);
+        if (emptyIndices.length === 0) {
+            hideAIThinking();
+            return;
+        }
+        const aiIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+        board[aiIndex] = PLAYER_X;
+        tiles[aiIndex].textContent = PLAYER_X;
+        tiles[aiIndex].classList.add('playerX');
+        hideAIThinking();
+        if (!handleResultValidation()) {
+            changePlayer();
+        }
+    }
+
+    function resetBoard() {
+        board = ['', '', '', '', '', '', '', '', ''];
+        isGameActive = true;
+        announcer.classList.add('hide');
+        if (currentPlayer !== PLAYER_O) changePlayer();
+        tiles.forEach(tile => {
+            tile.textContent = '';
+            tile.classList.remove('playerX', 'playerO', 'ai-thinking');
+        });
+        display.innerHTML = `Player <span class="display-player player${PLAYER_O}">${PLAYER_O}</span>'s turn`;
+    }
+
+    tiles.forEach((tile, index) => {
         tile.addEventListener('click', () => userAction(tile, index));
     });
 
     resetButton.addEventListener('click', resetBoard);
+
+    display.innerHTML = `Player <span class="display-player player${PLAYER_O}">${PLAYER_O}</span>'s turn`;
 });
